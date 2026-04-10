@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quiz Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="bg-shape bg-shape-a"></div>
+    <div class="bg-shape bg-shape-b"></div>
+    <button id="themeToggleBtn" class="theme-toggle" type="button" aria-label="Cambia tema">Tema scuro</button>
+
+    <main class="container">
+      <header class="hero reveal">
+        <p class="eyebrow">Quiz Generator</p>
+        <h1>Trasforma domande in un quiz interattivo</h1>
+        <p>
+          Incolla un JSON standardizzato con domande, opzioni e risposta corretta.
+          Il sistema genera il quiz e ti mostra il risultato con correzione finale.
+        </p>
+      </header>
+
+      <section class="card reveal" id="inputSection">
+        <h2>1) Input domande (formato standard)</h2>
+        <p class="muted">Formato supportato: JSON con proprietà <strong>title</strong> e <strong>questions</strong>.</p>
+        <div class="file-import">
+          <p class="muted">Oppure importa un file JSON</p>
+          <div id="dropZone" class="drop-zone" tabindex="0" role="button" aria-label="Trascina qui un file JSON o premi invio per selezionarlo">
+            <p class="drop-zone-title">Trascina qui il file JSON</p>
+            <p class="muted">oppure</p>
+            <button id="pickFileBtn" type="button" class="btn btn-secondary">Seleziona da Esplora risorse</button>
+            <input id="quizFile" class="file-input-hidden" type="file" accept=".json,application/json" />
+          </div>
+          <label class="check-row" for="shuffleToggle">
+            <input id="shuffleToggle" class="check-input" type="checkbox" checked />
+            <span class="check-ui" aria-hidden="true"></span>
+            <span>Randomizza domande e risposte</span>
+          </label>
+        </div>
+        <textarea id="quizJson" spellcheck="false"></textarea>
+        <div class="actions">
+          <button id="loadSampleBtn" class="btn btn-secondary">Carica esempio</button>
+          <button id="startQuizBtn" class="btn btn-primary">Crea quiz</button>
+        </div>
+        <p id="inputError" class="error" aria-live="polite"></p>
+        <p id="inputStatus" class="status" aria-live="polite"></p>
+      </section>
+
+      <section class="card hidden" id="quizSection">
+        <div class="quiz-top">
+          <div>
+            <p id="quizTitle" class="quiz-title"></p>
+            <p id="progress" class="muted"></p>
+            <div
+              id="progressTrack"
+              class="progress-track"
+              role="progressbar"
+              aria-label="Avanzamento quiz"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="0"
+            >
+              <div id="progressBar" class="progress-fill"></div>
+            </div>
+            <p id="progressPercent" class="muted progress-percent"></p>
+          </div>
+          <button id="restartBtn" class="btn btn-secondary">Esci dal quiz</button>
+        </div>
+
+        <article id="questionCard" class="question-card"></article>
+
+        <div class="actions">
+          <button id="prevBtn" class="btn btn-secondary">Indietro</button>
+          <button id="nextBtn" class="btn btn-primary">Avanti</button>
+          <button id="finishBtn" class="btn btn-accent hidden">Termina e correggi</button>
+        </div>
+      </section>
+
+      <section class="card hidden" id="resultSection">
+        <h2>Risultato</h2>
+        <p id="scoreLine" class="score"></p>
+        <div id="reviewList" class="review-list"></div>
+        <div class="actions">
+          <button id="backToStartFromResultsBtn" class="btn btn-secondary" type="button">Torna all'inizio</button>
+        </div>
+      </section>
+    </main>
+
+    <div id="exitModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="exitModalTitle">
+      <div class="modal-card">
+        <h3 id="exitModalTitle">Uscire dal quiz in corso?</h3>
+        <p class="muted">Perderai il progresso attuale e tornerai alla schermata iniziale.</p>
+        <div class="actions">
+          <button id="cancelExitBtn" class="btn btn-secondary" type="button">Annulla</button>
+          <button id="confirmExitBtn" class="btn btn-accent" type="button">Conferma uscita</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
