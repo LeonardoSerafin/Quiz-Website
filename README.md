@@ -36,6 +36,7 @@ Apri `index.html` nel browser.
 - Import da file JSON locale.
 - Navigazione tra domande.
 - Barra di avanzamento percentuale durante il quiz.
+- Salvataggio automatico progresso su `localStorage` con ripristino del quiz interrotto.
 - Randomizzazione opzionale di domande e opzioni all'avvio.
 - Uscita dal quiz in corso con conferma tramite modale.
 - Calcolo punteggio finale.
