@@ -17,6 +17,7 @@ const quizTitleEl = document.getElementById("quizTitle");
 const progressEl = document.getElementById("progress");
 const progressTrackEl = document.getElementById("progressTrack");
 const progressBarEl = document.getElementById("progressBar");
+const resumeHintEl = document.getElementById("resumeHint");
 const progressPercentEl = document.getElementById("progressPercent");
 const questionCardEl = document.getElementById("questionCard");
 
@@ -34,6 +35,7 @@ const scoreLineEl = document.getElementById("scoreLine");
 const reviewListEl = document.getElementById("reviewList");
 
 const THEME_STORAGE_KEY = "quiz-studio-theme";
+const QUIZ_PROGRESS_STORAGE_KEY = "quiz-studio-progress";
 
 const sampleQuiz = {
   title: "Capitale e geografia",
@@ -61,7 +63,7 @@ themeToggleBtn.addEventListener("click", () => {
   const currentTheme = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
   const nextTheme = currentTheme === "dark" ? "light" : "dark";
   applyTheme(nextTheme);
-  localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+  setStorageItem(THEME_STORAGE_KEY, nextTheme);
 });
 
 loadSampleBtn.addEventListener("click", () => {
@@ -118,17 +120,21 @@ startQuizBtn.addEventListener("click", () => {
   quizData = buildPlayableQuiz(parsed.value, shuffleToggleEl.checked);
   currentIndex = 0;
   answers = new Array(quizData.questions.length).fill(null);
+  resumeHintEl.textContent = "";
+  resumeHintEl.classList.add("hidden");
 
   quizTitleEl.textContent = quizData.title;
   inputSection.classList.add("hidden");
   resultSection.classList.add("hidden");
   quizSection.classList.remove("hidden");
+  saveQuizProgress();
   renderQuestion();
 });
 
 prevBtn.addEventListener("click", () => {
   if (currentIndex > 0) {
     currentIndex -= 1;
+    saveQuizProgress();
     renderQuestion();
   }
 });
@@ -136,6 +142,7 @@ prevBtn.addEventListener("click", () => {
 nextBtn.addEventListener("click", () => {
   if (currentIndex < quizData.questions.length - 1) {
     currentIndex += 1;
+    saveQuizProgress();
     renderQuestion();
   }
 });
@@ -185,6 +192,10 @@ function parseAndValidateQuiz(raw) {
     return { ok: false, error: "JSON non valido. Controlla parentesi e virgole." };
   }
 
+  return validateQuizObject(parsed);
+}
+
+function validateQuizObject(parsed) {
   if (typeof parsed !== "object" || parsed === null) {
     return { ok: false, error: "Il root JSON deve essere un oggetto." };
   }
@@ -253,6 +264,7 @@ function renderQuestion() {
       const selectedIndex = Number(optionLabel.dataset.optionIndex);
       answers[currentIndex] = selectedIndex;
       updateProgressByAnswers();
+      saveQuizProgress();
       renderQuestion();
     });
   });
@@ -288,6 +300,9 @@ function showResults() {
 
   quizSection.classList.add("hidden");
   resultSection.classList.remove("hidden");
+  resumeHintEl.textContent = "";
+  resumeHintEl.classList.add("hidden");
+  clearQuizProgress();
 }
 
 function openExitModal() {
@@ -306,6 +321,9 @@ function resetToStart() {
   quizData = null;
   answers = [];
   currentIndex = 0;
+  resumeHintEl.textContent = "";
+  resumeHintEl.classList.add("hidden");
+  clearQuizProgress();
   closeExitModal();
   quizSection.classList.add("hidden");
   resultSection.classList.add("hidden");
@@ -329,6 +347,9 @@ function importQuizFromFile(selectedFile) {
   };
   reader.onerror = () => {
     inputErrorEl.textContent = "Impossibile leggere il file selezionato.";
+  };
+  reader.onloadend = () => {
+    quizFileEl.value = "";
   };
 
   reader.readAsText(selectedFile);
@@ -416,7 +437,7 @@ function applyTheme(theme) {
 }
 
 function getInitialTheme() {
-  const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+  const storedTheme = getStorageItem(THEME_STORAGE_KEY);
   if (storedTheme === "light" || storedTheme === "dark") {
     return storedTheme;
   }
@@ -425,6 +446,115 @@ function getInitialTheme() {
   return prefersDark ? "dark" : "light";
 }
 
+function saveQuizProgress() {
+  if (!quizData || !quizData.questions.length) {
+    return;
+  }
+
+  const payload = {
+    version: 1,
+    quizData,
+    currentIndex,
+    answers
+  };
+
+  setStorageItem(QUIZ_PROGRESS_STORAGE_KEY, JSON.stringify(payload));
+}
+
+function clearQuizProgress() {
+  removeStorageItem(QUIZ_PROGRESS_STORAGE_KEY);
+}
+
+function restoreQuizProgress() {
+  const rawSavedState = getStorageItem(QUIZ_PROGRESS_STORAGE_KEY);
+  if (!rawSavedState) {
+    return false;
+  }
+
+  let parsedState;
+  try {
+    parsedState = JSON.parse(rawSavedState);
+  } catch {
+    clearQuizProgress();
+    return false;
+  }
+
+  if (!isValidSavedState(parsedState)) {
+    clearQuizProgress();
+    return false;
+  }
+
+  quizData = parsedState.quizData;
+  currentIndex = parsedState.currentIndex;
+  answers = parsedState.answers;
+  quizTitleEl.textContent = quizData.title;
+  inputSection.classList.add("hidden");
+  resultSection.classList.add("hidden");
+  quizSection.classList.remove("hidden");
+  resumeHintEl.textContent = "Quiz precedente ripristinato automaticamente.";
+  resumeHintEl.classList.remove("hidden");
+  inputErrorEl.textContent = "";
+  renderQuestion();
+  return true;
+}
+
+function isValidSavedState(state) {
+  if (typeof state !== "object" || state === null || state.version !== 1) {
+    return false;
+  }
+
+  const quizValidation = validateQuizObject(state.quizData);
+  if (!quizValidation.ok) {
+    return false;
+  }
+
+  const questions = state.quizData.questions;
+  if (!Number.isInteger(state.currentIndex) || state.currentIndex < 0 || state.currentIndex >= questions.length) {
+    return false;
+  }
+
+  if (!Array.isArray(state.answers) || state.answers.length !== questions.length) {
+    return false;
+  }
+
+  for (let index = 0; index < state.answers.length; index += 1) {
+    const answer = state.answers[index];
+    if (answer === null) {
+      continue;
+    }
+    if (!Number.isInteger(answer) || answer < 0 || answer >= questions[index].options.length) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function getStorageItem(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function setStorageItem(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch (error) {
+    console.warn(`Impossibile salvare su localStorage (key: ${key}).`, error);
+  }
+}
+
+function removeStorageItem(key) {
+  try {
+    localStorage.removeItem(key);
+  } catch (error) {
+    console.warn(`Impossibile rimuovere dati da localStorage (key: ${key}).`, error);
+  }
+}
+
 quizJsonEl.value = JSON.stringify(sampleQuiz, null, 2);
 progressPercentEl.textContent = "0% completato";
 applyTheme(getInitialTheme());
+restoreQuizProgress();
